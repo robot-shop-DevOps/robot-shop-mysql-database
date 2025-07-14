@@ -21,7 +21,7 @@ mysql:
           name: mysql
           key: MYSQL_ROOT_PASSWORD
     volumeMounts:
-      name: mysql-data
+    - name: mysql-data
       mountPath: /var/lib/mysql
   volumeClaimTemplates:
   - metadata:
@@ -33,8 +33,8 @@ mysql:
         requests:
           storage: 1Gi  
   job:
+    restartPolicy: OnFailure
     container:
-      restartPolicy: OnFailure
       env:
       - name: MYSQL_ROOT_PASSWORD
         valueFrom: 
