@@ -1,0 +1,6 @@
+env: pre
+
+mysql:
+  replicas: 1
+  labels:
+    env: pre

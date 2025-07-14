@@ -1,0 +1,57 @@
+mysql:
+  microservice: mysql
+  labels:
+    service: mysql
+  replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  container:
+    image:
+      repo: ${REPO}    # <-- placeholder
+      version: ${IMAGE_TAG}    # <-- placeholder
+      pullPolicy: IfNotPresent
+    port: 3306
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      valueFrom: 
+        secretKeyRef:
+          name: mysql
+          key: MYSQL_ROOT_PASSWORD
+    volumeMounts:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 1Gi  
+  job:
+    container:
+      restartPolicy: OnFailure
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_ROOT_PASSWORD
+      - name: MYSQL_CITIES_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_CITIES_PASSWORD
+      - name: MYSQL_RATINGS_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_RATINGS_PASSWORD
+  service:
+    type: ClusterIP
+    port: 3306
+    targetPort: 3306
