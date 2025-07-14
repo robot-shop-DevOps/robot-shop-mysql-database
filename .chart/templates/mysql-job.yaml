@@ -35,7 +35,7 @@ spec:
             mysql -h mysql-service -u root -p"$MYSQL_ROOT_PASSWORD" <<EOF
             CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}';
             GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
-            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}';.
+            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}';
             GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
-        EOF
+            EOF
         restartPolicy: {{ .Values.mysql.job.container.restartPolicy }}
