@@ -1,28 +1,20 @@
-mysql:
-  microservice: mysql
-  labels:
-    service: mysql
+microservice: mysql
+
+labels:
+  app: MySql
+  project: Robot-Shop
+  technology: MySql-Database
+  environment: default   
+
+statefulset:
   replicas: 1
+
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
-      maxSurge: 1
-  container:
-    image:
-      repo: ${REPO}    # <-- placeholder
-      version: ${IMAGE_TAG}    # <-- placeholder
-      pullPolicy: IfNotPresent
-    port: 3306
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      valueFrom: 
-        secretKeyRef:
-          name: mysql
-          key: MYSQL_ROOT_PASSWORD
-    volumeMounts:
-    - name: mysql-data
-      mountPath: /var/lib/mysql
+      maxSurge: 
+      
   volumeClaimTemplates:
   - metadata:
       name: mysql-data
@@ -32,9 +24,43 @@ mysql:
       resources:
         requests:
           storage: 1Gi  
-  job:
+
+  pod:
+    nodeSelector:
+      project: Robot-Shop
+ 
+    container:  
+      image:
+        repo: ${REPO}            # <-- placeholder
+        version: ${IMAGE_TAG}    # <-- placeholder
+        pullPolicy: Always
+
+      port: 3306
+
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_ROOT_PASSWORD
+
+      volumeMounts:
+      - name: mysql-data
+        mountPath: /var/lib/mysql
+
+job:
+  pod:
     restartPolicy: OnFailure
+
+    nodeSelector:
+      project: Robot-Shop
+    
     container:
+      image:
+        repo: ${REPO}            # <-- placeholder
+        version: ${IMAGE_TAG}    # <-- placeholder
+        pullPolicy: Always
+
       env:
       - name: MYSQL_ROOT_PASSWORD
         valueFrom: 
@@ -51,7 +77,13 @@ mysql:
           secretKeyRef:
             name: mysql
             key: MYSQL_RATINGS_PASSWORD
-  service:
-    type: ClusterIP
+
+service:
+  name: mysql-service-headless
+
+  type: ClusterIP
+
+  ports:
+  - name: mysql
     port: 3306
     targetPort: 3306

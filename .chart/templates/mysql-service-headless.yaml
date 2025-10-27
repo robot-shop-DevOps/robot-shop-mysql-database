@@ -3,20 +3,13 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.mysql.microservice }}-service-headless
+  name: {{ .Values.microservice }}
 
 spec:
   ClusterIP: None
+
   selector:
-    app.kubernetes.io/name: {{ .Chart.Name }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/Version: {{ .Chart.Version }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    app.kubernetes.io/component: {{ .Values.mysql.microservice }}
-    {{- range $key,$value := .Values.mysql.labels }}
-    {{ $key }}: {{ $value }}
-    {{- end }}
+{{ .Values.labels | toYaml | indent 4 }}
+
   ports:
-  - name: mysql
-    port: {{ .Values.mysql.service.port }}
-    targetPort: {{ .Values.mysql.service.targetPort }}
+{{ .Values.service.ports | toYaml | indent 4 }}
