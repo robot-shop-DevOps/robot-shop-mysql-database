@@ -27,6 +27,7 @@ spec:
 
         args:
         - |
+            apt-get update && apt-get install -y netcat mysql-client
             while ! nc -zv "mysql" "3306"; do
               echo "MySQL is not available yet"
               sleep 5
