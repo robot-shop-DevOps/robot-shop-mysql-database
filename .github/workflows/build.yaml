@@ -17,19 +17,7 @@ env:
   RELEASE: mysql
 
 jobs:
-    prepare:
-      runs-on: robot-shop-runner-azure-dev
-      steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4.3.0
-        with:
-          version: 3.9.0
-
     build:
-      needs: prepare
       runs-on: robot-shop-runner-azure-dev
       outputs:
         IMAGE_TAG: ${{ steps.version.outputs.IMAGE_TAG }}
@@ -62,6 +50,14 @@ jobs:
       needs: build
       runs-on: robot-shop-runner-azure-dev
       steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: 3.9.0
+
       - name: Find project namespace
         run: |
           if kubectl get ns ${{ env.NAMESPACE }} > /dev/null; then
