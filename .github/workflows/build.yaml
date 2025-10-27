@@ -28,22 +28,13 @@ jobs:
         with:
           version: 3.9.0
 
-      - name: Set Azure Credentials   
-        run: |
-            echo "Using dev environment"
-            echo "ARM_CLIENT_ID=${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_ID_ACR }}" >> $GITHUB_ENV
-            echo "ARM_CLIENT_SECRET=${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_SECRET_ACR }}" >> $GITHUB_ENV
-            echo "ARM_SUBSCRIPTION_ID=${{ secrets.ROBOT_SHOP_DEV_AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
-            echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-            echo "Configured Azure creds"
-
     build:
       needs: prepare
       runs-on: robot-shop-runner-azure-dev
       outputs:
         IMAGE_TAG: ${{ steps.version.outputs.IMAGE_TAG }}
       steps:
-      - name: Get latest docker image tag
+      - name: Get latest image tag
         id: version
         run: |
           branch_name=$(echo "$GITHUB_REF_NAME" | tr '/' '-')
@@ -51,14 +42,17 @@ jobs:
           echo "IMAGE_TAG=$image_tag" >> $GITHUB_OUTPUT
 
       - name: Log in to ACR
-        run: az acr login --name ${{ env.REGISTRY_NAME }}    
+        run: |
+          az login --service-principal -u ${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_ID_ACR }} -p ${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_SECRET_ACR }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+          az account set --subscription ${{ secrets.ROBOT_SHOP_DEV_AZURE_SUBSCRIPTION_ID }}
+          az acr login --name ${{ env.REGISTRY_NAME }}    
 
-      - name: Build docker image
+      - name: Build image with Buildah
         run: |
           buildah build -t ${{ env.IMAGE_NAME }} ./mysql
           buildah tag ${{ env.IMAGE_NAME }} ${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.IMAGE_TAG }}
 
-      - name: Push docker image
+      - name: Push image with Buildah
         run: |
           buildah push ${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.IMAGE_TAG }}
 
