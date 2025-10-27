@@ -27,17 +27,6 @@ spec:
 
         args:
         - |
-            apt-get update && apt-get install -y netcat mysql-client
-            while ! nc -zv "mysql" "3306"; do
-              echo "MySQL is not available yet"
-              sleep 5
-            done
-
-            echo "Creating users..."
-
-            mysql -h mysql -u root -p"$MYSQL_ROOT_PASSWORD" <<EOF
-            CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}';
-            GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
-            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}';
-            GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
-            EOF
+          until mysql -h mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          echo 'Creating users...'
+          mysql -h mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
