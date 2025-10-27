@@ -20,7 +20,7 @@ statefulset:
       name: mysql-data
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      storageClassName: standard
+      storageClassName: default
       resources:
         requests:
           storage: 1Gi  
