@@ -6,7 +6,7 @@ metadata:
   name: {{ .Values.microservice }}
 
 spec:
-  ClusterIP: None
+  clusterIP: None
 
   selector:
 {{ .Values.labels | toYaml | indent 4 }}
