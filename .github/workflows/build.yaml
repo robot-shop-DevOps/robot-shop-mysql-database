@@ -45,7 +45,7 @@ jobs:
         run: |
           az login --service-principal -u ${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_ID_ACR }} -p ${{ secrets.ROBOT_SHOP_DEV_AZURE_CLIENT_SECRET_ACR }} --tenant ${{ secrets.AZURE_TENANT_ID }}
           az account set --subscription ${{ secrets.ROBOT_SHOP_DEV_AZURE_SUBSCRIPTION_ID }}
-          Token=$(az acr login --name ${{ env.REGISTRY_NAME }} --expose-token --outupt json | jq -r '.[].accessToken')   
+          Token=$(az acr login --name ${{ env.REGISTRY_NAME }} --expose-token --output json | jq -r '.[].accessToken')   
           buildah login ${{ env.REGISTRY_URL }} -u 00000000-0000-0000-0000-000000000000 -p $Token 
 
       - name: Build image with Buildah
