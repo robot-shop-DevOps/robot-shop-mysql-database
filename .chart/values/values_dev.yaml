@@ -1,0 +1,14 @@
+labels:
+  environment: dev
+
+replicas: 1
+
+statefulset:
+  pod:
+    nodeSelector:
+      environment: dev
+
+job:
+  pod:
+    nodeSelector:
+      environment: dev
