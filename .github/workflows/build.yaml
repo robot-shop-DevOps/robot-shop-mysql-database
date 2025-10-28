@@ -102,5 +102,6 @@ jobs:
 
       - name: Verify deployment
         run: | 
-          kubectl rollout status statefulset/mysql --namespace ${{ env.NAMESPACE }}
+          kubectl rollout status statefulset/mysql-master --namespace ${{ env.NAMESPACE }}
+          kubectl rollout status statefulset/mysql-slave --namespace ${{ env.NAMESPACE }}
           helm status ${{ env.RELEASE }} --namespace ${{ env.NAMESPACE }} --output table
