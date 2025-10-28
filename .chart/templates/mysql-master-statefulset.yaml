@@ -29,6 +29,9 @@ spec:
       nodeSelector:
 {{ .Values.statefulset.mysqlmaster.pod.nodeSelector | toYaml | indent 8 }}
 
+      volumes:
+{{ .Values.statefulset.mysqlmaster.pod.volumes | toYaml | indent 8 }}
+
       containers:
       - name: {{ .Values.statefulset.mysqlmaster.name }}
 
