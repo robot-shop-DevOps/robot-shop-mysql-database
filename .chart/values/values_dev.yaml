@@ -2,14 +2,14 @@ labels:
   environment: dev
 
 statefulset:
-  mysql-master:
+  mysqlmaster:
     replicas: 1
 
     pod:
       nodeSelector:
         environment: dev
 
-  mysql-slave:
+  mysqlslave:
     replicas: 2
     
     pod:
@@ -17,7 +17,7 @@ statefulset:
         environment: dev
 
 job:
-  mysql-master:
+  mysqlmaster:
     pod:
       nodeSelector:
         environment: dev

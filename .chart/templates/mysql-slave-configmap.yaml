@@ -3,9 +3,9 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.configMap.mysql-slave.name }}
+  name: {{ .Values.configMap.mysqlslave.name }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 
 data:
-{{ .Values.configMap.mysql-slave.data | toYaml | indent 2 }}
+{{ .Values.configMap.mysqlslave.data | toYaml | indent 2 }}

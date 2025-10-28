@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 
 metadata:
-  name: {{ .Values.statefulset.mysql-slave.name }}
+  name: {{ .Values.statefulset.mysqlslave.name }}
 
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
@@ -13,12 +13,12 @@ spec:
     matchLabels:
 {{ .Values.labels | toYaml | indent 6 }}
 
-  serviceName: {{ .Values.service.mysql-slave.name }}
+  serviceName: {{ .Values.service.mysqlslave.name }}
 
-  replicas: {{ .Values.statefulset.mysql-slave.replicas }}
+  replicas: {{ .Values.statefulset.mysqlslave.replicas }}
 
   updateStrategy:
-{{ .Values.statefulset.mysql-slave.updateStrategy | toYaml | indent 4 }}
+{{ .Values.statefulset.mysqlslave.updateStrategy | toYaml | indent 4 }}
 
   template:
     metadata:
@@ -27,26 +27,26 @@ spec:
 
     spec:
       nodeSelector:
-{{ .Values.statefulset.mysql-slave.pod.nodeSelector | toYaml | indent 8 }}
+{{ .Values.statefulset.mysqlslave.pod.nodeSelector | toYaml | indent 8 }}
 
       containers:
-      - name: {{ .Values.statefulset.mysql-slave.name }}
+      - name: {{ .Values.statefulset.mysqlslave.name }}
 
-        image: "{{ .Values.statefulset.mysql-slave.pod.container.image.repo }}:{{ .Values.statefulset.mysql-slave.pod.container.image.version }}"
+        image: "{{ .Values.statefulset.mysqlslave.pod.container.image.repo }}:{{ .Values.statefulset.mysqlslave.pod.container.image.version }}"
 
-        imagePullPolicy: {{ .Values.statefulset.mysql-slave.pod.container.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.statefulset.mysqlslave.pod.container.image.pullPolicy }}
 
         ports:
-        - containerPort: {{ .Values.statefulset.mysql-slave.pod.container.port }}
+        - containerPort: {{ .Values.statefulset.mysqlslave.pod.container.port }}
 
         command:
-{{ .Values.statefulset.mysql-slave.pod.container.command | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlslave.pod.container.command | toYaml | indent 10 }}
 
         env:
-{{ .Values.statefulset.mysql-slave.pod.container.env | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlslave.pod.container.env | toYaml | indent 10 }}
 
         volumeMounts:
-{{ .Values.statefulset.mysql-slave.pod.container.volumeMounts | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlslave.pod.container.volumeMounts | toYaml | indent 10 }}
 
   volumeClaimTemplates:
-{{ .Values.statefulset.mysql-slave.volumeClaimTemplates | toYaml | indent 4 }}
+{{ .Values.statefulset.mysqlslave.volumeClaimTemplates | toYaml | indent 4 }}
