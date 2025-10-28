@@ -6,7 +6,7 @@ labels:
 
 configMap:
   mysqlmaster:  
-    name: mysql-master-configmap
+    name: mysql-master-config
     
     data:
       my.cnf: |
@@ -20,7 +20,7 @@ configMap:
         read_only=OFF
 
   mysqlslave:
-    name: mysql-slave-configmap
+    name: mysql-slave-config
     
     data:
       my.cnf: |
@@ -42,7 +42,6 @@ statefulset:
       type: RollingUpdate
       rollingUpdate:
         maxUnavailable: 1
-        maxSurge: 
         
     volumeClaimTemplates:
     - metadata:
@@ -106,7 +105,6 @@ statefulset:
       type: RollingUpdate
       rollingUpdate:
         maxUnavailable: 1
-        maxSurge: 
         
     volumeClaimTemplates:
     - metadata:
