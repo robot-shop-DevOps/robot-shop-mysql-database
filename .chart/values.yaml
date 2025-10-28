@@ -5,7 +5,7 @@ labels:
   environment: default  
 
 configMap:
-  mysql-master:  
+  mysqlmaster:  
     name: mysql-master-configmap
     
     data:
@@ -19,7 +19,7 @@ configMap:
         log_slave_updates=ON
         read_only=OFF
 
-  mysql-slave:
+  mysqlslave:
     name: mysql-slave-configmap
     
     data:
@@ -33,7 +33,7 @@ configMap:
         read_only=ON
 
 statefulset:
-  mysql-master:
+  mysqlmaster:
     name: mysql-master
 
     replicas: 1
@@ -97,7 +97,7 @@ statefulset:
         - name: config
           mountPath: /etc/mysql/conf.d
 
-  mysql-slave:
+  mysqlslave:
     name: mysql-slave
 
     replicas: 1
@@ -176,7 +176,7 @@ statefulset:
           mountPath: /etc/mysql/conf.d
 
 job:
-  mysql-master:
+  mysqlmaster:
     name: mysql-master
     pod:
       restartPolicy: OnFailure
@@ -210,7 +210,7 @@ job:
           value: mysql-master-service-headless
 
 service:
-  mysql-master:
+  mysqlmaster:
     name: mysql-master-service-headless
 
     type: ClusterIP
@@ -220,7 +220,7 @@ service:
       port: 3306
       targetPort: 3306
 
-  mysql-slave:
+  mysqlslave:
     name: mysql-slave-service-headless
 
     type: ClusterIP

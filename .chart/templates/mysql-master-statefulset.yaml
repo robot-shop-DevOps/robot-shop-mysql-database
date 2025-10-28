@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 
 metadata:
-  name: {{ .Values.statefulset.mysql-master.name }}
+  name: {{ .Values.statefulset.mysqlmaster.name }}
 
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
@@ -13,12 +13,12 @@ spec:
     matchLabels:
 {{ .Values.labels | toYaml | indent 6 }}
 
-  serviceName: {{ .Values.service.mysql-master.name }}
+  serviceName: {{ .Values.service.mysqlmaster.name }}
 
-  replicas: {{ .Values.statefulset.mysql-master.replicas }}
+  replicas: {{ .Values.statefulset.mysqlmaster.replicas }}
 
   updateStrategy:
-{{ .Values.statefulset.mysql-master.updateStrategy | toYaml | indent 4 }}
+{{ .Values.statefulset.mysqlmaster.updateStrategy | toYaml | indent 4 }}
 
   template:
     metadata:
@@ -27,23 +27,23 @@ spec:
 
     spec:
       nodeSelector:
-{{ .Values.statefulset.mysql-master.pod.nodeSelector | toYaml | indent 8 }}
+{{ .Values.statefulset.mysqlmaster.pod.nodeSelector | toYaml | indent 8 }}
 
       containers:
-      - name: {{ .Values.statefulset.mysql-master.name }}
+      - name: {{ .Values.statefulset.mysqlmaster.name }}
 
-        image: "{{ .Values.statefulset.mysql-master.pod.container.image.repo }}:{{ .Values.statefulset.mysql-master.pod.container.image.version }}"
+        image: "{{ .Values.statefulset.mysqlmaster.pod.container.image.repo }}:{{ .Values.statefulset.mysqlmaster.pod.container.image.version }}"
 
-        imagePullPolicy: {{ .Values.statefulset.mysql-master.pod.container.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.statefulset.mysqlmaster.pod.container.image.pullPolicy }}
 
         ports:
-        - containerPort: {{ .Values.statefulset.mysql-master.pod.container.port }}
+        - containerPort: {{ .Values.statefulset.mysqlmaster.pod.container.port }}
 
         env:
-{{ .Values.statefulset.mysql-master.pod.container.env | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlmaster.pod.container.env | toYaml | indent 10 }}
 
         volumeMounts:
-{{ .Values.statefulset.mysql-master.pod.container.volumeMounts | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlmaster.pod.container.volumeMounts | toYaml | indent 10 }}
 
   volumeClaimTemplates:
-{{ .Values.statefulset.mysql-master.volumeClaimTemplates | toYaml | indent 4 }}
+{{ .Values.statefulset.mysqlmaster.volumeClaimTemplates | toYaml | indent 4 }}

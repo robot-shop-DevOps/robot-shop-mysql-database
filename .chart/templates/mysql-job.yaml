@@ -3,25 +3,25 @@ apiVersion: batch/v1
 kind: Job
 
 metadata:
-  name: {{ .Values.job.mysql-master.name }}
+  name: {{ .Values.job.mysqlmaster.name }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 
 spec:
   template:
     spec:
-      restartPolicy: {{ .Values.job.mysql-master.pod.restartPolicy }}
+      restartPolicy: {{ .Values.job.mysqlmaster.pod.restartPolicy }}
 
       nodeSelector: 
-{{ .Values.job.mysql-master.pod.nodeSelector | toYaml | indent 8 }}
+{{ .Values.job.mysqlmaster.pod.nodeSelector | toYaml | indent 8 }}
 
       containers:
       - name: setup-users
 
-        image: "{{ .Values.job.mysql-master.pod.container.image.repo }}:{{ .Values.job.mysql-master.pod.container.image.version }}"
+        image: "{{ .Values.job.mysqlmaster.pod.container.image.repo }}:{{ .Values.job.mysqlmaster.pod.container.image.version }}"
 
         env:
-{{ .Values.job.mysql-master.pod.container.env | toYaml | indent 10 }}
+{{ .Values.job.mysqlmaster.pod.container.env | toYaml | indent 10 }}
 
         command: ["/bin/sh", "-c"]
 
