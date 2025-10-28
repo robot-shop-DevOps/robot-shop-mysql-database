@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+
+kind: StatefulSet
+
+metadata:
+  name: {{ .Values.statefulset.mysql-master.name }}
+
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+
+spec:
+  selector:
+    matchLabels:
+{{ .Values.labels | toYaml | indent 6 }}
+
+  serviceName: {{ .Values.service.mysql-master.name }}
+
+  replicas: {{ .Values.statefulset.mysql-master.replicas }}
+
+  updateStrategy:
+{{ .Values.statefulset.mysql-master.updateStrategy | toYaml | indent 4 }}
+
+  template:
+    metadata:
+      labels:
+{{ .Values.labels | toYaml | indent 8 }}
+
+    spec:
+      nodeSelector:
+{{ .Values.statefulset.mysql-master.pod.nodeSelector | toYaml | indent 8 }}
+
+      containers:
+      - name: {{ .Values.statefulset.mysql-master.name }}
+
+        image: "{{ .Values.statefulset.mysql-master.pod.container.image.repo }}:{{ .Values.statefulset.mysql-master.pod.container.image.version }}"
+
+        imagePullPolicy: {{ .Values.statefulset.mysql-master.pod.container.image.pullPolicy }}
+
+        ports:
+        - containerPort: {{ .Values.statefulset.mysql-master.pod.container.port }}
+
+        env:
+{{ .Values.statefulset.mysql-master.pod.container.env | toYaml | indent 10 }}
+
+        volumeMounts:
+{{ .Values.statefulset.mysql-master.pod.container.volumeMounts | toYaml | indent 10 }}
+
+  volumeClaimTemplates:
+{{ .Values.statefulset.mysql-master.volumeClaimTemplates | toYaml | indent 4 }}

@@ -1,0 +1,11 @@
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.configMap.mysql-master.name }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+
+data:
+{{ .Values.configMap.mysql-master.data | toYaml | indent 2 }}
