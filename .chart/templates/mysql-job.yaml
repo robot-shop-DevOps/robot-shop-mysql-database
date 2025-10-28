@@ -3,30 +3,36 @@ apiVersion: batch/v1
 kind: Job
 
 metadata:
-  name: {{ .Values.microservice }}
+  name: {{ .Values.job.mysql-master.name }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 
 spec:
   template:
     spec:
-      restartPolicy: {{ .Values.job.pod.restartPolicy }}
+      restartPolicy: {{ .Values.job.mysql-master.pod.restartPolicy }}
 
       nodeSelector: 
-{{ .Values.job.pod.nodeSelector | toYaml | indent 8 }}
+{{ .Values.job.mysql-master.pod.nodeSelector | toYaml | indent 8 }}
 
       containers:
       - name: setup-users
 
-        image: "{{ .Values.job.pod.container.image.repo }}:{{ .Values.job.pod.container.image.version }}"
+        image: "{{ .Values.job.mysql-master.pod.container.image.repo }}:{{ .Values.job.mysql-master.pod.container.image.version }}"
 
         env:
-{{ .Values.job.pod.container.env | toYaml | indent 10 }}
+{{ .Values.job.mysql-master.pod.container.env | toYaml | indent 10 }}
 
         command: ["/bin/sh", "-c"]
 
         args:
         - |
-          until mysql -h mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          until mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          echo 'MySQL is up - executing commands'
+          echo 'Inserting initial data...'
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/10-dumps.sql
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/20-ratings.sql
+          echo 'Data inserted.'
           echo 'Creating users...'
-          mysql -h mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
+          echo 'Users created.'

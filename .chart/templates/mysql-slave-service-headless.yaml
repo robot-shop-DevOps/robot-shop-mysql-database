@@ -1,0 +1,15 @@
+apiVersion: v1
+
+kind: Service
+
+metadata:
+  name: {{ .Values.service.mysql-slave.name }}
+
+spec:
+  clusterIP: None
+
+  selector:
+{{ .Values.labels | toYaml | indent 4 }}
+
+  ports:
+{{ .Values.service.mysql-slave.ports | toYaml | indent 4 }}
