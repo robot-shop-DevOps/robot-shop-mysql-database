@@ -29,6 +29,9 @@ spec:
       nodeSelector:
 {{ .Values.statefulset.mysqlslave.pod.nodeSelector | toYaml | indent 8 }}
 
+      volumes:
+{{ .Values.statefulset.mysqlslave.pod.volumes | toYaml | indent 8 }}
+
       containers:
       - name: {{ .Values.statefulset.mysqlslave.name }}
 
