@@ -96,12 +96,10 @@ jobs:
           helm upgrade ${{ env.RELEASE }} ${{ env.chart_path }} \
           -f ${{ env.chart_path }}/values.yaml -f ${{ env.chart_path }}/values/values_dev.yaml \
           --namespace ${{ env.NAMESPACE }} --install --atomic \
-          --set statefulset.mysqlmaster.pod.container.image.repo="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}" \
-          --set statefulset.mysqlmaster.pod.container.image.version="${{ needs.build.outputs.IMAGE_TAG }}" \
-          --set statefulset.mysqlslave.pod.container.image.repo="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}" \
-          --set statefulset.mysqlslave.pod.container.image.version="${{ needs.build.outputs.IMAGE_TAG }}" \
-          --set job.mysqlmaster.pod.container.image.repo="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}" \
-          --set job.mysqlmaster.pod.container.image.version="${{ needs.build.outputs.IMAGE_TAG }}"
+          -- set statefulset.mysqlmaster.pod.containers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
+          -- set statefulset.mysqlslave.pod.initContainers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
+          -- set statefulset.mysqlslave.pod.containers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
+          --set job.mysqlmaster.pod.containers[0].image.version="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}"
 
       - name: Verify deployment
         run: | 

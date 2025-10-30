@@ -62,13 +62,15 @@ statefulset:
         configMap:
           name: mysql-master-config
   
-      container:  
-        image:
-          repo: ${REPO}            # <-- placeholder
-          version: ${IMAGE_TAG}    # <-- placeholder
-          pullPolicy: Always
+      containers:  
+      - name: mysql-master
 
-        port: 3306
+        image: ${IMAGE}  # <-- placeholder
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 3306
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -124,25 +126,32 @@ statefulset:
       - name: config
         configMap:
           name: mysql-slave-config
-  
-      container:  
-        command: 
+      - name: writable-config
+        emptyDir: {}
+
+      initContainers:
+      - name: mysql-slave-init
+        volumeMounts:
+            - name: config-map
+              mountPath: /etc/mysql/conf.d
+
+            - name: writable-config
+              mountPath: /mnt/conf.d
+
+        image: ${IMAGE}  # <-- placeholder
+        
+        command:
         - "sh"
         - "-c"
         - |
-          server_id=$(HOSTNAME | awk -F'-' '{print $3}')
-          echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
+          echo "Preparing MySQL slave config"
+          cp /etc/mysql/conf.d/my.cnf /writable-config/my.cnf
+          server_id=$(echo "$HOSTNAME" | awk -F'-' '{print $3}')
+          echo "server-id=$server_id" >> /writable-config/my.cnf
           until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do sleep 5; done
           mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD \
-              -e "CHANGE MASTER TO MASTER_HOST='$MASTER_HOST', MASTER_USER='$MYSQL_REPLICATION_USER', MASTER_PASSWORD='$MYSQL_REPLICATION_PASSWORD', MASTER_AUTO_POSITION=1; START SLAVE;"
+              -e "CHANGE REPLICATION SOURCE TO SOURCE_HOST=$MASTER_HOST, SOURCE_USER=$MYSQL_REPLICATION_USER, SOURCE_PASSWORD=$MYSQL_REPLICATION_PASSWORD, SOURCE_AUTO_POSITION=1; START REPLICA;"
           exec mysqld
-
-        image:
-          repo: ${REPO}            # <-- placeholder
-          version: ${IMAGE_TAG}    # <-- placeholder
-          pullPolicy: Always
-
-        port: 3306
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -164,29 +173,53 @@ statefulset:
               key: MYSQL_REPL_PASSWORD
 
         - name: MASTER_HOST
-          value: mysql-master-service-headless 
+          value: mysql-master-service-headless
+  
+      containers:  
+      - name: mysql-slave
+
+        image: ${IMAGE}  # <-- placeholder
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 3306
 
         volumeMounts:
         - name: mysql-data
           mountPath: /var/lib/mysql
 
-        - name: config
+        - name: writable-config
           mountPath: /etc/mysql/conf.d
 
 job:
   mysqlmaster:
     name: mysql-master
+
     pod:
       restartPolicy: OnFailure
 
       nodeSelector:
         project: Robot-Shop
       
-      container:
-        image:
-          repo: ${REPO}            # <-- placeholder
-          version: ${IMAGE_TAG}    # <-- placeholder
-          pullPolicy: Always
+      containers:
+      - name: setup-users-and-data
+
+        image: ${IMAGE}  # <-- placeholder
+
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - |
+          until mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          echo 'MySQL is up - executing commands'
+          echo 'Inserting initial data...'
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/10-dumps.sql
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/20-ratings.sql
+          echo 'Data inserted.'
+          echo 'Creating users...'
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
+          echo 'Users created.'
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -211,7 +244,7 @@ service:
   mysqlmaster:
     name: mysql-master-service-headless
 
-    type: ClusterIP
+    clusterIP: None
 
     ports:
     - name: mysql
@@ -221,7 +254,7 @@ service:
   mysqlslave:
     name: mysql-slave-service-headless
 
-    type: ClusterIP
+    clusterIP: None
 
     ports:
     - name: mysql
