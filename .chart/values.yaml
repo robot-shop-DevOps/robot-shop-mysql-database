@@ -144,12 +144,15 @@ statefulset:
         - "sh"
         - "-c"
         - |
+          set -e
           echo "Preparing MySQL slave config"
           cp /mnt/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
           server_id=$(echo "$HOSTNAME" | awk -F'-' '{print $3}')
+          server_id=$(($server_id+100))
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
-          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do sleep 5; done
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD \
+          until mysql -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          echo 'MySQL is up - setting up slave'
+          mysql -u root -p$MYSQL_ROOT_PASSWORD \
               -e "STOP REPLICA; \
               CHANGE REPLICATION SOURCE TO \
               SOURCE_HOST='$MASTER_HOST', \
@@ -157,6 +160,7 @@ statefulset:
               SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
               SOURCE_AUTO_POSITION=1; \
               START REPLICA;"
+          echo "slave setup successfully."
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -223,6 +227,7 @@ job:
         - "/bin/sh"
         - "-c"
         - |
+          set -e
           until mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
           echo 'MySQL is up - executing commands'
           echo 'Inserting initial data...'
