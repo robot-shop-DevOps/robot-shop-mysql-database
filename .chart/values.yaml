@@ -150,17 +150,17 @@ statefulset:
           server_id=$(echo "$HOSTNAME" | awk -F'-' '{print $3}')
           server_id=$(($server_id+100))
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
-          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
-          echo 'MySQL is up - setting up slave'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD \
-              -e "STOP REPLICA; \
-              CHANGE REPLICATION SOURCE TO \
-              SOURCE_HOST='$MASTER_HOST', \
-              SOURCE_USER='$MYSQL_REPLICATION_USER', \
-              SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
-              SOURCE_AUTO_POSITION=1; \
-              START REPLICA;"
-          echo "slave setup successfully."
+          echo "MySQL slave config prepared"
+  
+      containers:  
+      - name: mysql-slave
+
+        image: ${IMAGE}  # <-- placeholder
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 3306
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -181,25 +181,22 @@ statefulset:
               name: mysql
               key: MYSQL_REPL_PASSWORD
 
-        - name: MASTER_HOST
-          value: mysql-master-service-headless
-  
-      containers:  
-      - name: mysql-slave
-
-        image: ${IMAGE}  # <-- placeholder
-
-        imagePullPolicy: Always
-
-        ports:
-        - containerPort: 3306
-
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom: 
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_ROOT_PASSWORD
+        command:
+        - "sh"
+        - "-c"
+        - |
+          set -e
+          until mysql -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          echo 'Setting up slave'
+          mysql -u root -p$MYSQL_ROOT_PASSWORD \
+              -e "STOP REPLICA; \
+              CHANGE REPLICATION SOURCE TO \
+              SOURCE_HOST='$MASTER_HOST', \
+              SOURCE_USER='$MYSQL_REPLICATION_USER', \
+              SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
+              SOURCE_AUTO_POSITION=1; \
+              START REPLICA;"
+          echo "Slave setup successfully."
 
         volumeMounts:
         - name: mysql-data
@@ -234,9 +231,21 @@ job:
           mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/10-dumps.sql
           mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/20-ratings.sql
           echo 'Data inserted.'
-          echo 'Creating users...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
-          echo 'Users created.'
+          echo 'Creating application users...'
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "
+            CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}';
+            GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
+            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}';
+            GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
+          "
+          echo 'Application users created.'
+          echo 'Creating replication user...'
+          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "
+            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
+            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
+            FLUSH PRIVILEGES;
+          "
+          echo 'Replication user created.'
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -244,16 +253,31 @@ job:
             secretKeyRef:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
+
         - name: MYSQL_CITIES_PASSWORD
           valueFrom: 
             secretKeyRef:
               name: mysql
               key: MYSQL_CITIES_PASSWORD
+
         - name: MYSQL_RATINGS_PASSWORD
           valueFrom: 
             secretKeyRef:
               name: mysql
               key: MYSQL_RATINGS_PASSWORD
+
+        - name: MYSQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_USER
+
+        - name: MYSQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_PASSWORD
+
         - name: MYSQL_HOST
           value: mysql-master-service-headless
 
