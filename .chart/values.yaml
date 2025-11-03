@@ -132,7 +132,7 @@ statefulset:
       initContainers:
       - name: mysql-slave-init
         volumeMounts:
-            - name: config-map
+            - name: config
               mountPath: /etc/mysql/conf.d
 
             - name: writable-config
