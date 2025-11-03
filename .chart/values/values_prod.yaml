@@ -1,0 +1,23 @@
+labels:
+  environment: prod
+
+statefulset:
+  mysqlmaster:
+    replicas: 1
+
+    pod:
+      nodeSelector:
+        environment: prod
+
+  mysqlslave:
+    replicas: 4
+    
+    pod:
+      nodeSelector:
+        environment: prod
+
+job:
+  mysqlmaster:
+    pod:
+      nodeSelector:
+        environment: prod
