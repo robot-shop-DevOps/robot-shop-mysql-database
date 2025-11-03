@@ -6,7 +6,7 @@ metadata:
   name: {{ .Values.service.mysqlslave.name }}
 
 spec:
-  clusterIP: None
+  clusterIP: {{ .Values.service.mysqlslave.clusterIP }}
 
   selector:
 {{ .Values.labels | toYaml | indent 4 }}

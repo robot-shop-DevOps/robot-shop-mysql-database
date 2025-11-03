@@ -32,24 +32,11 @@ spec:
       volumes:
 {{ .Values.statefulset.mysqlslave.pod.volumes | toYaml | indent 8 }}
 
+      initContainers:
+{{ .Values.statefulset.mysqlslave.pod.initContainers | toYaml | indent 8 }}
+
       containers:
-      - name: {{ .Values.statefulset.mysqlslave.name }}
-
-        image: "{{ .Values.statefulset.mysqlslave.pod.container.image.repo }}:{{ .Values.statefulset.mysqlslave.pod.container.image.version }}"
-
-        imagePullPolicy: {{ .Values.statefulset.mysqlslave.pod.container.image.pullPolicy }}
-
-        ports:
-        - containerPort: {{ .Values.statefulset.mysqlslave.pod.container.port }}
-
-        command:
-{{ .Values.statefulset.mysqlslave.pod.container.command | toYaml | indent 10 }}
-
-        env:
-{{ .Values.statefulset.mysqlslave.pod.container.env | toYaml | indent 10 }}
-
-        volumeMounts:
-{{ .Values.statefulset.mysqlslave.pod.container.volumeMounts | toYaml | indent 10 }}
+{{ .Values.statefulset.mysqlslave.pod.containers | toYaml | indent 8 }}
 
   volumeClaimTemplates:
 {{ .Values.statefulset.mysqlslave.volumeClaimTemplates | toYaml | indent 4 }}

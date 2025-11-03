@@ -16,23 +16,4 @@ spec:
 {{ .Values.job.mysqlmaster.pod.nodeSelector | toYaml | indent 8 }}
 
       containers:
-      - name: setup-users
-
-        image: "{{ .Values.job.mysqlmaster.pod.container.image.repo }}:{{ .Values.job.mysqlmaster.pod.container.image.version }}"
-
-        env:
-{{ .Values.job.mysqlmaster.pod.container.env | toYaml | indent 10 }}
-
-        command: ["/bin/sh", "-c"]
-
-        args:
-        - |
-          until mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
-          echo 'MySQL is up - executing commands'
-          echo 'Inserting initial data...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/10-dumps.sql
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/20-ratings.sql
-          echo 'Data inserted.'
-          echo 'Creating users...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}'; GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%'; CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}'; GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';"
-          echo 'Users created.'
+{{ .Values.job.mysqlmaster.pod.containers | toYaml | indent 8 }}
