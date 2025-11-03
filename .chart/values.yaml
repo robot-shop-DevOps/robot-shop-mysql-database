@@ -150,7 +150,8 @@ statefulset:
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
           until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do sleep 5; done
           mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD \
-              -e "CHANGE REPLICATION SOURCE TO \
+              -e "STOP REPLICA; \
+              CHANGE REPLICATION SOURCE TO \
               SOURCE_HOST='$MASTER_HOST', \
               SOURCE_USER='$MYSQL_REPLICATION_USER', \
               SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
