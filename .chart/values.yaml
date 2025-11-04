@@ -211,7 +211,7 @@ statefulset:
               name: mysql
               key: MYSQL_REPL_PASSWORD
 
-        - name: MYSQL_HOST
+        - name: MASTER_HOST
           value: mysql-master-service-headless
 
 job:
@@ -234,22 +234,22 @@ job:
         - "-c"
         - |
           set -e
-          until mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
+          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
           echo 'MySQL is up - executing commands'
           echo 'Inserting initial data...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/10-dumps.sql
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-scripts/20-ratings.sql
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
           echo 'Data inserted.'
           echo 'Creating application users...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "
-            CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '${MYSQL_RATINGS_PASSWORD}';
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+            CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '$MYSQL_RATINGS_PASSWORD';
             GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
-            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '${MYSQL_SHIPPING_PASSWORD}';
+            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '$MYSQL_SHIPPING_PASSWORD';
             GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
           "
           echo 'Application users created.'
           echo 'Creating replication user...'
-          mysql -h $MYSQL_HOST -u root -p"$MYSQL_ROOT_PASSWORD" -e "
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
             CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
             GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
             FLUSH PRIVILEGES;
