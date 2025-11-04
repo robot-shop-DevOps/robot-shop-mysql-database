@@ -101,7 +101,7 @@ statefulset:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "2"
+      "helm.sh/hook-weight": "1"
 
     replicas: 1
 
@@ -153,6 +153,29 @@ statefulset:
           server_id=$(($server_id+100))
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
           echo "MySQL slave config prepared"
+          echo 'Creating replication user...'
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
+            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
+            FLUSH PRIVILEGES;
+          "
+          echo 'Replication user created.'
+
+        env:
+        - name: MYSQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_USER
+
+        - name: MYSQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_PASSWORD
+
+        - name: MYSQL_HOST
+          value: mysql-master-service-headless
   
       containers:  
       - name: mysql-slave
@@ -200,6 +223,7 @@ statefulset:
               SOURCE_AUTO_POSITION=1; \
               START REPLICA;"
           echo "Slave setup successfully."
+          sleep infinity
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -229,7 +253,7 @@ job:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-weight": "2"
       "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
@@ -262,13 +286,6 @@ job:
             GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
           "
           echo 'Application users created.'
-          echo 'Creating replication user...'
-          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
-            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
-            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
-            FLUSH PRIVILEGES;
-          "
-          echo 'Replication user created.'
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -288,18 +305,6 @@ job:
             secretKeyRef:
               name: mysql
               key: MYSQL_RATINGS_PASSWORD
-
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
 
         - name: MYSQL_HOST
           value: mysql-master-service-headless
