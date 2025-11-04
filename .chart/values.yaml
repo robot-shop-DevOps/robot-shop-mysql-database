@@ -182,7 +182,7 @@ statefulset:
           set -e
           until mysql --protocol=TCP -h 127.0.0.1 -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
           echo 'Setting up slave'
-          mysql -u root -p$MYSQL_ROOT_PASSWORD \
+          mysql --protocol=TCP -h 127.0.0.1 -u root -p$MYSQL_ROOT_PASSWORD \
               -e "STOP REPLICA; \
               CHANGE REPLICATION SOURCE TO \
               SOURCE_HOST='$MASTER_HOST', \
