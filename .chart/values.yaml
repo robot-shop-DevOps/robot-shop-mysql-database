@@ -169,17 +169,14 @@ statefulset:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
 
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
+      - name: mysql-slave-sidecar
 
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
+        image: ${IMAGE}  # <-- placeholder
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 3306
 
         command:
         - "sh"
@@ -198,12 +195,27 @@ statefulset:
               START REPLICA;"
           echo "Slave setup successfully."
 
-        volumeMounts:
-        - name: mysql-data
-          mountPath: /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_ROOT_PASSWORD
 
-        - name: writable-config
-          mountPath: /etc/mysql/conf.d
+        - name: MYSQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_USER
+
+        - name: MYSQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_PASSWORD
+
+        - name: MYSQL_HOST
+          value: mysql-master-service-headless
 
 job:
   mysqlmaster:
