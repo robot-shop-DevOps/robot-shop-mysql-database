@@ -99,6 +99,7 @@ jobs:
           --set statefulset.mysqlmaster.pod.containers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
           --set statefulset.mysqlslave.pod.initContainers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
           --set statefulset.mysqlslave.pod.containers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
+          --set statefulset.mysqlslave.pod.containers[1].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}" \
           --set job.mysqlmaster.pod.containers[0].image="${{ env.REGISTRY_URL }}/robot-shop/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.IMAGE_TAG }}"
 
       - name: Verify deployment
