@@ -169,6 +169,13 @@ statefulset:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
 
+        volumeMounts:
+            - name: config
+              mountPath: /mnt/mysql/conf.d
+
+            - name: writable-config
+              mountPath: /etc/mysql/conf.d
+
       - name: mysql-slave-sidecar
 
         image: ${IMAGE}  # <-- placeholder
