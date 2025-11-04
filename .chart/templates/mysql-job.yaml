@@ -6,6 +6,8 @@ metadata:
   name: {{ .Values.job.mysqlmaster.name }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
+  annotations:
+{{ .Values.job.mysqlmaster.annotations | toYaml | indent 4 }}
 
 spec:
   template:

@@ -2,7 +2,7 @@ labels:
   app: MySql
   project: Robot-Shop
   technology: MySql-Database
-  environment: default  
+  environment: default 
 
 configMap:
   mysqlmaster:  
@@ -100,6 +100,10 @@ statefulset:
 
   mysqlslave:
     name: mysql-slave
+
+    annotations:
+      "helm.sh/hook": post-install,post-upgrade
+      "helm.sh/hook-weight": "2"
 
     replicas: 1
 
@@ -224,6 +228,11 @@ statefulset:
 job:
   mysqlmaster:
     name: mysql-master
+
+    annotations:
+      "helm.sh/hook": post-install,post-upgrade
+      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
       restartPolicy: OnFailure
