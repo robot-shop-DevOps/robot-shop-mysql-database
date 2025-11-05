@@ -162,6 +162,12 @@ statefulset:
           echo 'Replication user created.'
 
         env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_ROOT_PASSWORD
+              
         - name: MYSQL_REPLICATION_USER
           valueFrom:
             secretKeyRef:
