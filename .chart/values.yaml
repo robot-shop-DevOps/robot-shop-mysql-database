@@ -103,7 +103,7 @@ statefulset:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "2"
+      "helm.sh/hook-weight": "1"
 
     replicas: 1
 
@@ -156,7 +156,7 @@ statefulset:
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
           echo "MySQL slave config prepared"
           echo 'Creating replication user...'
-          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
             CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
             GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
             FLUSH PRIVILEGES;
@@ -182,7 +182,7 @@ statefulset:
               name: mysql
               key: MYSQL_REPL_PASSWORD
 
-        - name: MYSQL_HOST
+        - name: MASTER_HOST
           value: mysql-master-service-headless
   
       containers:  
@@ -261,7 +261,7 @@ job:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-weight": "2"
       "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
@@ -280,14 +280,16 @@ job:
         - "-c"
         - |
           set -e
-          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
-          echo 'MySQL is up - executing commands'
+          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for master to be up...'; sleep 5; done
+          echo 'MySQL Master is up'
+          until mysql -h $SLAVE_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for slave to be up...'; sleep 5; done
+          echo 'MySQL Slave is up'
           echo 'Inserting initial data...'
-          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
-          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
           echo 'Data inserted.'
           echo 'Creating application users...'
-          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
             CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '$MYSQL_RATINGS_PASSWORD';
             GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
             CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '$MYSQL_SHIPPING_PASSWORD';
@@ -314,8 +316,11 @@ job:
               name: mysql
               key: MYSQL_RATINGS_PASSWORD
 
-        - name: MYSQL_HOST
+        - name: MASTER_HOST
           value: mysql-master-service-headless
+
+        - name: SLAVE_HOST
+          value: mysql-slave-service-headless
 
 service:
   mysqlmaster:
