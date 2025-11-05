@@ -18,6 +18,7 @@ configMap:
         log_slave_updates=ON
         read_only=OFF
         binlog_expire_logs_seconds=86400
+        caching_sha2_password_auto_generate_rsa_keys=ON
 
   mysqlslave:
     name: mysql-slave-config
@@ -211,6 +212,7 @@ statefulset:
               SOURCE_HOST='$MASTER_HOST', \
               SOURCE_USER='$MYSQL_REPLICATION_USER', \
               SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
+              GET_MASTER_PUBLIC_KEY=1; \
               SOURCE_AUTO_POSITION=1; \
               START REPLICA;"
           echo "Slave setup successfully."
