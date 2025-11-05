@@ -17,6 +17,7 @@ configMap:
         gtid_mode=ON
         log_slave_updates=ON
         read_only=OFF
+        binlog_expire_logs_seconds=86400
 
   mysqlslave:
     name: mysql-slave-config
@@ -28,6 +29,7 @@ configMap:
         enforce_gtid_consistency=ON
         gtid_mode=ON
         log_slave_updates=ON
+        relay_log_recovery=ON
         read_only=ON
 
 statefulset:
@@ -101,7 +103,7 @@ statefulset:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-weight": "2"
 
     replicas: 1
 
@@ -167,7 +169,7 @@ statefulset:
             secretKeyRef:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
-              
+
         - name: MYSQL_REPLICATION_USER
           valueFrom:
             secretKeyRef:
@@ -259,7 +261,7 @@ job:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "2"
+      "helm.sh/hook-weight": "1"
       "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
