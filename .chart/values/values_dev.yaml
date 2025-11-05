@@ -17,7 +17,12 @@ statefulset:
         environment: dev
 
 job:
-  mysqlmaster:
+  create_users:
+    pod:
+      nodeSelector:
+        environment: dev
+
+  insert_data:
     pod:
       nodeSelector:
         environment: dev

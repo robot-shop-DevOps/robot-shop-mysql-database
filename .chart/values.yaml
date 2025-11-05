@@ -103,7 +103,7 @@ statefulset:
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-weight": "2"
 
     replicas: 1
 
@@ -155,35 +155,6 @@ statefulset:
           server_id=$(($server_id+100))
           echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
           echo "MySQL slave config prepared"
-          echo 'Creating replication user...'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
-            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
-            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
-            FLUSH PRIVILEGES;
-          "
-          echo 'Replication user created.'
-
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom: 
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_ROOT_PASSWORD
-
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
-
-        - name: MASTER_HOST
-          value: mysql-master-service-headless
   
       containers:  
       - name: mysql-slave
@@ -256,12 +227,12 @@ statefulset:
           value: mysql-master-service-headless
 
 job:
-  mysqlmaster:
-    name: mysql-master
+  create_users:
+    name: create-users
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "2"
+      "helm.sh/hook-weight": "1"
       "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
@@ -271,7 +242,7 @@ job:
         project: Robot-Shop
       
       containers:
-      - name: setup-users-and-data
+      - name: create-users
 
         image: ${IMAGE}  # <-- placeholder
 
@@ -282,12 +253,6 @@ job:
           set -e
           until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for master to be up...'; sleep 5; done
           echo 'MySQL Master is up'
-          until mysql -h $SLAVE_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for slave to be up...'; sleep 5; done
-          echo 'MySQL Slave is up'
-          echo 'Inserting initial data...'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
-          echo 'Data inserted.'
           echo 'Creating application users...'
           mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
             CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '$MYSQL_RATINGS_PASSWORD';
@@ -296,6 +261,13 @@ job:
             GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
           "
           echo 'Application users created.'
+          echo 'Creating replication user...'
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
+            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
+            FLUSH PRIVILEGES;
+          "
+          echo 'Replication user created.'
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -315,6 +287,61 @@ job:
             secretKeyRef:
               name: mysql
               key: MYSQL_RATINGS_PASSWORD
+
+        - name: MYSQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_USER
+
+        - name: MYSQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_PASSWORD
+
+        - name: MASTER_HOST
+          value: mysql-master-service-headless
+
+  insert_data:
+    name: insert-data
+
+    annotations:
+      "helm.sh/hook": post-install,post-upgrade
+      "helm.sh/hook-weight": "3"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+    pod:
+      restartPolicy: OnFailure
+
+      nodeSelector:
+        project: Robot-Shop
+      
+      containers:
+      - name: insert-data
+
+        image: ${IMAGE}  # <-- placeholder
+
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - |
+          set -e
+          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for master to be up...'; sleep 5; done
+          echo 'MySQL Master is up'
+          until mysql -h $SLAVE_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for slave to be up...'; sleep 5; done
+          echo 'MySQL Slave is up'
+          echo 'Inserting initial data...'
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
+          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
+          echo 'Data inserted.'
+
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_ROOT_PASSWORD
 
         - name: MASTER_HOST
           value: mysql-master-service-headless
