@@ -10,7 +10,7 @@ statefulset:
         environment: dev
 
   mysqlslave:
-    replicas: 2
+    replicas: 1
     
     pod:
       nodeSelector:
