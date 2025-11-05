@@ -173,6 +173,18 @@ statefulset:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
 
+        - name: MYSQL_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_USER
+
+        - name: MYSQL_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_REPL_PASSWORD
+
         volumeMounts:
             - name: config
               mountPath: /mnt/mysql/conf.d
