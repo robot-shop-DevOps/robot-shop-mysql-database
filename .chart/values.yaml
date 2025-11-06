@@ -4,240 +4,50 @@ labels:
   technology: MySql-Database
   environment: default 
 
-configMap:
-  mysqlmaster:  
-    name: mysql-master-config
-    
-    data:
-      my.cnf: |
-        [mysqld]
-        server-id=1
-        log_bin=mysql-bin
-        enforce_gtid_consistency=ON
-        gtid_mode=ON
-        log_slave_updates=ON
-        read_only=OFF
-        binlog_expire_logs_seconds=86400
-        caching_sha2_password_auto_generate_rsa_keys=ON
-
-  mysqlslave:
-    name: mysql-slave-config
-    
-    data:
-      my.cnf: |
-        [mysqld]
-        log_bin=mysql-bin
-        enforce_gtid_consistency=ON
-        gtid_mode=ON
-        log_slave_updates=ON
-        relay_log_recovery=ON
-        read_only=ON
-
 statefulset:
-  mysqlmaster:
-    name: mysql-master
+  name: mysql
 
-    replicas: 1
+  replicas: 1
 
-    updateStrategy:
-      type: RollingUpdate
-      rollingUpdate:
-        maxUnavailable: 1
-        
-    volumeClaimTemplates:
-    - metadata:
-        name: mysql-data
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: default
-        resources:
-          requests:
-            storage: 1Gi  
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: default
+      resources:
+        requests:
+          storage: 1Gi  
 
-    pod:
-      nodeSelector:
-        project: Robot-Shop
+  pod:
+    nodeSelector:
+      project: Robot-Shop
 
-      volumes:
-      - name: config
-        configMap:
-          name: mysql-master-config
-  
-      containers:  
-      - name: mysql-master
+    containers:  
+    - name: mysql
 
-        image: ${IMAGE}  # <-- placeholder
+      image: ${IMAGE}  # <-- placeholder
 
-        imagePullPolicy: Always
+      imagePullPolicy: Always
 
-        ports:
-        - containerPort: 3306
+      ports:
+      - containerPort: 3306
 
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom: 
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_ROOT_PASSWORD
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_ROOT_PASSWORD
 
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
-
-        volumeMounts:
-        - name: mysql-data
-          mountPath: /var/lib/mysql
-
-        - name: config
-          mountPath: /etc/mysql/conf.d
-
-  mysqlslave:
-    name: mysql-slave
-
-    annotations:
-      "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "2"
-
-    replicas: 1
-
-    updateStrategy:
-      type: RollingUpdate
-      rollingUpdate:
-        maxUnavailable: 1
-        
-    volumeClaimTemplates:
-    - metadata:
-        name: mysql-data
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: default
-        resources:
-          requests:
-            storage: 1Gi  
-
-    pod:
-      nodeSelector:
-        project: Robot-Shop
-
-      volumes:
-      - name: config
-        configMap:
-          name: mysql-slave-config
-      - name: writable-config
-        emptyDir: {}
-
-      initContainers:
-      - name: mysql-slave-init
-        volumeMounts:
-            - name: config
-              mountPath: /mnt/mysql/conf.d
-
-            - name: writable-config
-              mountPath: /etc/mysql/conf.d
-
-        image: ${IMAGE}  # <-- placeholder
-        
-        command:
-        - "sh"
-        - "-c"
-        - |
-          set -e
-          echo "Preparing MySQL slave config"
-          cp /mnt/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
-          server_id=$(echo "$HOSTNAME" | awk -F'-' '{print $3}')
-          server_id=$(($server_id+100))
-          echo "server-id=$server_id" >> /etc/mysql/conf.d/my.cnf
-          echo "MySQL slave config prepared"
-  
-      containers:  
-      - name: mysql-slave
-
-        image: ${IMAGE}  # <-- placeholder
-
-        imagePullPolicy: Always
-
-        ports:
-        - containerPort: 3306
-
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom: 
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_ROOT_PASSWORD
-
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
-
-        volumeMounts:
-            - name: config
-              mountPath: /mnt/mysql/conf.d
-
-            - name: writable-config
-              mountPath: /etc/mysql/conf.d
-
-      - name: mysql-slave-sidecar
-
-        image: ${IMAGE}  # <-- placeholder
-
-        imagePullPolicy: Always
-
-        command:
-        - "sh"
-        - "-c"
-        - |
-          set -e
-          until mysql --protocol=TCP --get-server-public-key -h 127.0.0.1 -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting...'; sleep 5; done
-          echo 'Setting up slave'
-          mysql --protocol=TCP -h 127.0.0.1 -u root -p$MYSQL_ROOT_PASSWORD \
-              -e "STOP REPLICA; \
-              CHANGE REPLICATION SOURCE TO \
-              SOURCE_HOST='$MASTER_HOST', \
-              SOURCE_USER='$MYSQL_REPLICATION_USER', \
-              SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD', \
-              SOURCE_AUTO_POSITION=1; \
-              START REPLICA;"
-          echo "Slave setup successfully."
-          sleep infinity
-
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom: 
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_ROOT_PASSWORD
-
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
-
-        - name: MASTER_HOST
-          value: mysql-master-service-headless
+      volumeMounts:
+      - name: mysql-data
+        mountPath: /var/lib/mysql
 
 job:
   create_users:
@@ -264,23 +74,16 @@ job:
         - "-c"
         - |
           set -e
-          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for master to be up...'; sleep 5; done
-          echo 'MySQL Master is up'
+          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for mysql to be up...'; sleep 5; done
+          echo 'MySQL is up'
           echo 'Creating application users...'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
             CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '$MYSQL_RATINGS_PASSWORD';
             GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
             CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '$MYSQL_SHIPPING_PASSWORD';
             GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
           "
           echo 'Application users created.'
-          echo 'Creating replication user...'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
-            CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD';
-            GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%';
-            FLUSH PRIVILEGES;
-          "
-          echo 'Replication user created.'
 
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -301,27 +104,15 @@ job:
               name: mysql
               key: MYSQL_RATINGS_PASSWORD
 
-        - name: MYSQL_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_USER
-
-        - name: MYSQL_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql
-              key: MYSQL_REPL_PASSWORD
-
-        - name: MASTER_HOST
-          value: mysql-master-service-headless
+        - name: MYSQL_HOST
+          value: mysql-service-headless
 
   insert_data:
     name: insert-data
 
     annotations:
       "helm.sh/hook": post-install,post-upgrade
-      "helm.sh/hook-weight": "3"
+      "helm.sh/hook-weight": "2"
       "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 
     pod:
@@ -340,13 +131,11 @@ job:
         - "-c"
         - |
           set -e
-          until mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for master to be up...'; sleep 5; done
-          echo 'MySQL Master is up'
-          until mysql -h $SLAVE_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for slave to be up...'; sleep 5; done
-          echo 'MySQL Slave is up'
+          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for mysql to be up...'; sleep 5; done
+          echo 'MySQL is up'
           echo 'Inserting initial data...'
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
-          mysql -h $MASTER_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
           echo 'Data inserted.'
 
         env:
@@ -356,29 +145,15 @@ job:
               name: mysql
               key: MYSQL_ROOT_PASSWORD
 
-        - name: MASTER_HOST
-          value: mysql-master-service-headless
-
-        - name: SLAVE_HOST
-          value: mysql-slave-service-headless
+        - name: MYSQL_HOST
+          value: mysql-service-headless
 
 service:
-  mysqlmaster:
-    name: mysql-master-service-headless
+  name: mysql-service-headless
 
-    clusterIP: None
+  clusterIP: None
 
-    ports:
-    - name: mysql
-      port: 3306
-      targetPort: 3306
-
-  mysqlslave:
-    name: mysql-slave-service-headless
-
-    clusterIP: None
-
-    ports:
-    - name: mysql
-      port: 3306
-      targetPort: 3306
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
