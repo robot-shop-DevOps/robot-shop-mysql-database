@@ -96,7 +96,7 @@ job:
           valueFrom: 
             secretKeyRef:
               name: mysql
-              key: MYSQL_CITIES_PASSWORD
+              key: MYSQL_SHIPPING_PASSWORD
 
         - name: MYSQL_RATINGS_PASSWORD
           valueFrom: 
