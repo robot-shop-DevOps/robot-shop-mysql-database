@@ -1,0 +1,159 @@
+labels:
+  app: MySql
+  project: Robot-Shop
+  technology: MySql-Database
+  environment: default 
+
+statefulset:
+  name: mysql
+
+  replicas: 1
+
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: default
+      resources:
+        requests:
+          storage: 1Gi  
+
+  pod:
+    nodeSelector:
+      project: Robot-Shop
+
+    containers:  
+    - name: mysql
+
+      image: ${IMAGE}  # <-- placeholder
+
+      imagePullPolicy: Always
+
+      ports:
+      - containerPort: 3306
+
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        valueFrom: 
+          secretKeyRef:
+            name: mysql
+            key: MYSQL_ROOT_PASSWORD
+
+      volumeMounts:
+      - name: mysql-data
+        mountPath: /var/lib/mysql
+
+job:
+  create_users:
+    name: create-users
+
+    annotations:
+      "helm.sh/hook": post-install,post-upgrade
+      "helm.sh/hook-weight": "1"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+    pod:
+      restartPolicy: OnFailure
+
+      nodeSelector:
+        project: Robot-Shop
+      
+      containers:
+      - name: create-users
+
+        image: ${IMAGE}  # <-- placeholder
+
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - |
+          set -e
+          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for mysql to be up...'; sleep 5; done
+          echo 'MySQL is up'
+          echo 'Creating application users...'
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "
+            CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY '$MYSQL_RATINGS_PASSWORD';
+            GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
+            CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY '$MYSQL_SHIPPING_PASSWORD';
+            GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
+          "
+          echo 'Application users created.'
+
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_ROOT_PASSWORD
+
+        - name: MYSQL_SHIPPING_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_SHIPPING_PASSWORD
+
+        - name: MYSQL_RATINGS_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_RATINGS_PASSWORD
+
+        - name: MYSQL_HOST
+          value: mysql-service-headless
+
+  insert_data:
+    name: insert-data
+
+    annotations:
+      "helm.sh/hook": post-install,post-upgrade
+      "helm.sh/hook-weight": "2"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+    pod:
+      restartPolicy: OnFailure
+
+      nodeSelector:
+        project: Robot-Shop
+      
+      containers:
+      - name: insert-data
+
+        image: ${IMAGE}  # <-- placeholder
+
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - |
+          set -e
+          until mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do echo 'Waiting for mysql to be up...'; sleep 5; done
+          echo 'MySQL is up'
+          echo 'Inserting initial data...'
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/10-dumps.sql
+          mysql -h $MYSQL_HOST -u root -p$MYSQL_ROOT_PASSWORD < /docker-scripts/20-ratings.sql
+          echo 'Data inserted.'
+
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql
+              key: MYSQL_ROOT_PASSWORD
+
+        - name: MYSQL_HOST
+          value: mysql-service-headless
+
+service:
+  name: mysql-service-headless
+
+  clusterIP: None
+
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
